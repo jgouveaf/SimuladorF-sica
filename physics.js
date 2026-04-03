@@ -275,9 +275,15 @@ function drawPieChart() {
 }
 
 function drawPhETBarChart() {
-    const x = 30, y = 50, w = 150, h = 180;
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-    ctx.roundRect ? ctx.fillRoundedRect(x, y, w, h, 10) : ctx.fillRect(x, y, w, h);
+    const x = 30, y = 50, w = 155, h = 180;
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+    if (ctx.roundRect) {
+        ctx.beginPath();
+        ctx.roundRect(x, y, w, h, 10);
+        ctx.fill();
+    } else {
+        ctx.fillRect(x, y, w, h);
+    }
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
     ctx.strokeRect(x, y, w, h);
 
