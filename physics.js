@@ -3,126 +3,79 @@ const ctx = canvas.getContext('2d');
 const container = document.getElementById('sim-container');
 
 // UI Elements
-const massInput = document.getElementById('mass');
-const gravityInput = document.getElementById('gravity');
-const frictionInput = document.getElementById('friction');
-const timeScaleInput = document.getElementById('timescale');
-const scenarioSelect = document.getElementById('scenario');
+const getElem = id => document.getElementById(id);
+const massInput = getElem('mass');
+const gravityInput = getElem('gravity');
+const frictionInput = getElem('friction');
+const timescaleInput = getElem('timescale');
+const scenarioSelect = getElem('scenario');
 
-const valMass = document.getElementById('val-mass');
-const valGravity = document.getElementById('val-gravity');
-const valFriction = document.getElementById('val-friction');
-const valTimeScale = document.getElementById('val-timescale');
+const valMass = getElem('val-mass');
+const valGravity = getElem('val-gravity');
+const valFriction = getElem('val-friction');
+const valTimescale = getElem('val-timescale');
 
-const keLabel = document.getElementById('val-ke');
-const peLabel = document.getElementById('val-pe');
-const teLabel = document.getElementById('val-te');
-const keBar = document.getElementById('bar-ke');
-const peBar = document.getElementById('bar-pe');
-const teBar = document.getElementById('bar-te');
+const keLabel = getElem('val-ke'), peLabel = getElem('val-pe'), teLabel = getElem('val-te');
+const keBar = getElem('bar-ke'), peBar = getElem('bar-pe'), teBar = getElem('bar-te');
 
-const btnPause = document.getElementById('btn-pause');
-const btnReset = document.getElementById('btn-reset');
+const btnPause = getElem('btn-pause'), btnReset = getElem('btn-reset');
 
 // State
 let width, height;
-const pixelsToMeters = 50;
-let isPaused = false;
-let isDragging = false;
+const pixelsToMeters = 60;
+let isPaused = false, isDragging = false;
 let timeScale = 1.0;
 let currentScenario = 'free';
 
 let ball = {
-    x: 100,
-    y: 100,
-    radius: 12,
-    vx: 0,
-    vy: 0,
-    mass: 10,
-    gravity: 9.8,
-    friction: 0.01,
+    x: 0, y: 0, radius: 12,
+    vx: 0, vy: 0,
+    mass: 10, gravity: 9.8, friction: 0.01,
     color: '#6366f1'
 };
 
-// --- Models/Ramps Definition ---
-const Scenarios = {
-    free: {
-        getY: (x) => null,
-        start: () => ({ x: width / 2, y: 100 })
-    },
-    ramp: {
-        getY: (x) => {
-            const startX = 50, endX = width - 50;
-            const startY = 100, endY = height - 50;
-            if (x <= startX) return startY;
-            if (x >= endX) return endY;
-            return startY + (x - startX) * (endY - startY) / (endX - startX);
-        },
-        start: () => ({ x: 60, y: 100 - 12 })
-    },
-    parabola: {
-        getY: (x) => {
-            const centerX = width / 2;
-            const baseY = height - 50;
-            const depth = height - 150;
-            const widthScale = 0.002;
-            return baseY - depth * Math.exp(-widthScale * Math.pow(x - centerX, 2));
-        },
-        start: () => ({ x: 100, y: 130 })
-    },
-    bowl: {
-        getY: (x) => {
-            const centerX = width / 2;
-            const baseY = height - 50;
-            const radius = Math.min(width, height) * 0.4;
-            const dx = x - centerX;
-            if (Math.abs(dx) > radius) return null;
-            return baseY - Math.sqrt(radius * radius - dx * dx);
-        },
-        start: () => ({ x: width / 2 - 100, y: 300 })
-    }
-};
-
-// Help helper for bowl/loop logic
-function getSurfaceY(x) {
+// --- Ramps Definition ---
+const getSurfaceY = (x) => {
     if (currentScenario === 'free') return null;
-    if (currentScenario === 'ramp') return Scenarios.ramp.getY(x);
-    if (currentScenario === 'parabola') return Scenarios.parabola.getY(x);
     
-    // Custom bowl mapping for more models
+    if (currentScenario === 'ramp') {
+        // Linear ramp from 100 to height-50
+        const startX = 50, endX = width - 50;
+        const startY = 150, endY = height - 50;
+        if (x < startX) return startY;
+        if (x > endX) return endY;
+        return startY + (x - startX) * (endY - startY) / (endX - startX);
+    }
+    
+    if (currentScenario === 'parabola') {
+        const centerX = width / 2;
+        const baseY = height - 50;
+        return baseY - 300 + 0.002 * Math.pow(x - centerX, 2);
+    }
+    
     if (currentScenario === 'loop') {
-        // Wave/Terrain
-        return height - 150 + Math.sin(x * 0.01) * 50 + Math.cos(x * 0.005) * 30;
+        return height/2 + 80 * Math.sin(x * 0.015) + 100;
     }
     return null;
-}
+};
 
-// Get numeric derivative for slope
-function getSlopeInfo(x) {
-    const y0 = getSurfaceY(x);
-    if (y0 === null) return null;
-    
-    const dx = 0.1;
-    const y1 = getSurfaceY(x + dx);
-    const dy = y1 - y0;
-    const angle = Math.atan2(dy, dx);
-    
-    return {
-        y: y0,
-        angle: angle,
-        tx: Math.cos(angle),
-        ty: Math.sin(angle),
-        nx: -Math.sin(angle),
-        ny: Math.cos(angle)
-    };
+// Physics Helpers
+function getSurfaceInfo(x) {
+    const y = getSurfaceY(x);
+    if (y === null) return null;
+    const dx = 0.5;
+    const y2 = getSurfaceY(x + dx);
+    const angle = Math.atan2(y2 - y, dx);
+    return { y, angle, tx: Math.cos(angle), ty: Math.sin(angle) };
 }
 
 function reset() {
-    const pos = Scenarios[currentScenario]?.start?.() || { x: 100, y: 100 };
-    ball.x = pos.x;
-    ball.y = pos.y;
-    ball.vx = 0;
-    ball.vy = 0;
+    if (currentScenario === 'free') {
+        ball.x = width / 2; ball.y = 100;
+    } else {
+        ball.x = 60; ball.y = getSurfaceY(60) - ball.radius - 50;
+    }
+    ball.vx = 0; ball.vy = 0;
 }
 
 function resize() {
@@ -134,99 +87,99 @@ function resize() {
 }
 
 window.addEventListener('resize', resize);
+resize();
 
-// UI Listeners
-massInput.addEventListener('input', (e) => { ball.mass = +e.target.value; valMass.textContent = ball.mass; });
-gravityInput.addEventListener('input', (e) => { ball.gravity = +e.target.value; valGravity.textContent = ball.gravity; });
-frictionInput.addEventListener('input', (e) => { ball.friction = +e.target.value / 100; valFriction.textContent = e.target.value; });
-timeScaleInput.addEventListener('input', (e) => { timeScale = +e.target.value; valTimeScale.textContent = timeScale.toFixed(1); });
-scenarioSelect.addEventListener('change', (e) => { currentScenario = e.target.value; reset(); });
-btnPause.addEventListener('click', () => { isPaused = !isPaused; btnPause.textContent = isPaused ? 'Retomar' : 'Pausar'; });
-btnReset.addEventListener('click', reset);
+// UI Observers
+massInput.oninput = (e) => { ball.mass = +e.target.value; valMass.innerText = ball.mass; };
+gravityInput.oninput = (e) => { ball.gravity = +e.target.value; valGravity.innerText = ball.gravity; };
+frictionInput.oninput = (e) => { ball.friction = +e.target.value / 100; valFriction.innerText = e.target.value; };
+timescaleInput.oninput = (e) => { timeScale = +e.target.value; valTimescale.innerText = timeScale.toFixed(1); };
+scenarioSelect.onchange = (e) => { currentScenario = e.target.value; reset(); };
+btnPause.onclick = () => { isPaused = !isPaused; btnPause.innerText = isPaused ? 'Retomar' : 'Pausar'; };
+btnReset.onclick = reset;
 
-// Dragging
-canvas.addEventListener('mousedown', (e) => {
+// Interaction
+canvas.onmousedown = (e) => {
     const rect = canvas.getBoundingClientRect();
     const mx = e.clientX - rect.left, my = e.clientY - rect.top;
-    if (Math.hypot(mx - ball.x, my - ball.y) < ball.radius * 2) isDragging = true;
-});
-window.addEventListener('mousemove', (e) => {
+    if (Math.hypot(mx - ball.x, my - ball.y) < ball.radius * 3) isDragging = true;
+};
+window.onmousemove = (e) => {
     if (!isDragging) return;
     const rect = canvas.getBoundingClientRect();
     ball.x = e.clientX - rect.left;
     ball.y = e.clientY - rect.top;
     ball.vx = 0; ball.vy = 0;
-    if (ball.x < ball.radius) ball.x = ball.radius;
-    if (ball.x > width - ball.radius) ball.x = width - ball.radius;
-});
-window.addEventListener('mouseup', () => isDragging = false);
+};
+window.onmouseup = () => isDragging = false;
 
-// Init
-resize();
-
-// Loop
+// Physics Loop
 function update() {
     if (!isPaused && !isDragging) {
-        const dt = (1/60) * timeScale * 1.5; // Slightly faster base speed
+        const dt = (1/60) * timeScale;
         const g_px = ball.gravity * pixelsToMeters;
         
-        const surface = getSlopeInfo(ball.x);
-        const onSurface = surface && (ball.y + ball.radius >= surface.y - 4);
+        let subSteps = 5; // Use sub-stepping for stability
+        let subDt = dt / subSteps;
 
-        if (onSurface) {
-            // Apply physics on slope
-            // a = g * sin(theta) - friction
-            const gTangent = g_px * surface.ty;
-            let v = (ball.vx * surface.tx + ball.vy * surface.ty);
-            
-            v += gTangent * dt;
-            v *= (1 - ball.friction); // Simple friction
+        for (let s = 0; s < subSteps; s++) {
+            const surface = getSurfaceInfo(ball.x);
+            const onSurface = surface && (ball.y + ball.radius >= surface.y - 2);
 
-            ball.vx = v * surface.tx;
-            ball.vy = v * surface.ty;
-            ball.y = surface.y - ball.radius;
-        } else {
-            // Air physics
-            ball.vy += g_px * dt;
-            ball.vx *= (1 - ball.friction * 0.1);
-            ball.vy *= (1 - ball.friction * 0.1);
-            
-            ball.x += ball.vx * dt;
-            ball.y += ball.vy * dt;
-            
-            // Re-check collision with surface
-            const s2 = getSlopeInfo(ball.x);
-            if (s2 && ball.y + ball.radius >= s2.y) {
-                ball.y = s2.y - ball.radius;
-                // Reflect or slide? Let's project velocity to tangent
-                const vMag = (ball.vx * s2.tx + ball.vy * s2.ty);
-                ball.vx = vMag * s2.tx;
-                ball.vy = vMag * s2.ty;
-                // Bounce reduction
-                ball.vx *= 0.8;
-                ball.vy *= 0.8;
+            if (onSurface) {
+                // Motion along the slope
+                const tangentAccel = g_px * surface.ty;
+                let v = (ball.vx * surface.tx + ball.vy * surface.ty);
+                
+                v += tangentAccel * subDt;
+                v *= (1 - ball.friction * subDt * 10);
+                
+                ball.vx = v * surface.tx;
+                ball.vy = v * surface.ty;
+                ball.x += ball.vx * subDt;
+                ball.y = surface.y - ball.radius;
+            } else {
+                // Free fall
+                ball.vy += g_px * subDt;
+                ball.vx *= (1 - ball.friction * subDt * 2);
+                ball.vy *= (1 - ball.friction * subDt * 2);
+                
+                ball.x += ball.vx * subDt;
+                ball.y += ball.vy * subDt;
+                
+                // Ground/Surface crash check
+                const sAfter = getSurfaceInfo(ball.x);
+                if (sAfter && ball.y + ball.radius >= sAfter.y) {
+                    ball.y = sAfter.y - ball.radius;
+                    // Project velocity to tangent
+                    const vDotT = (ball.vx * sAfter.tx + ball.vy * sAfter.ty);
+                    ball.vx = vDotT * sAfter.tx;
+                    ball.vy = vDotT * sAfter.ty;
+                }
             }
-        }
 
-        // Walls
-        if (ball.x < ball.radius) { ball.x = ball.radius; ball.vx *= -0.5; }
-        if (ball.x > width - ball.radius) { ball.x = width - ball.radius; ball.vx *= -0.5; }
-        if (ball.y > height - ball.radius) { ball.y = height - ball.radius; ball.vy *= -0.5; }
+            // Wall Bounce
+            if (ball.x < ball.radius) { ball.x = ball.radius; ball.vx = Math.abs(ball.vx) * 0.5; }
+            if (ball.x > width - ball.radius) { ball.x = width - ball.radius; ball.vx = -Math.abs(ball.vx) * 0.5; }
+            if (ball.y > height - ball.radius) { ball.y = height - ball.radius; ball.vy = -Math.abs(ball.vy) * 0.5; }
+        }
     }
 
-    // Stats
+    // Energy
     const h = Math.max(0, (height - ball.radius - ball.y) / pixelsToMeters);
-    const vMeters = Math.hypot(ball.vx, ball.vy) / pixelsToMeters;
+    const speed = Math.hypot(ball.vx, ball.vy) / pixelsToMeters;
     const PE = ball.mass * ball.gravity * h;
-    const KE = 0.5 * ball.mass * vMeters * vMeters;
+    const KE = 0.5 * ball.mass * speed * speed;
     const TE = PE + KE;
 
-    keLabel.textContent = `${KE.toFixed(1)} J`;
-    peLabel.textContent = `${PE.toFixed(1)} J`;
-    teLabel.textContent = `${TE.toFixed(1)} J`;
-    keBar.style.width = `${Math.min(100, (KE / 5000) * 100)}%`;
-    peBar.style.width = `${Math.min(100, (PE / 5000) * 100)}%`;
-    teBar.style.width = `${Math.min(100, (TE / 5000) * 100)}%`;
+    keLabel.innerText = KE.toFixed(1) + ' J';
+    peLabel.innerText = PE.toFixed(1) + ' J';
+    teLabel.innerText = TE.toFixed(1) + ' J';
+    
+    const displayMax = 10000;
+    keBar.style.width = Math.min(100, (KE / displayMax) * 300) + '%';
+    peBar.style.width = Math.min(100, (PE / displayMax) * 300) + '%';
+    teBar.style.width = Math.min(100, (TE / displayMax) * 300) + '%';
 
     render();
     requestAnimationFrame(update);
@@ -235,43 +188,31 @@ function update() {
 function render() {
     ctx.clearRect(0, 0, width, height);
 
-    // Draw Ramp (Visual)
+    // Draw Surface
     if (currentScenario !== 'free') {
-        const gradient = ctx.createLinearGradient(0, 0, width, height);
-        gradient.addColorStop(0, 'rgba(99, 102, 241, 0.2)');
-        gradient.addColorStop(1, 'rgba(239, 68, 68, 0.2)');
-        
-        ctx.strokeStyle = gradient;
-        ctx.lineWidth = 6;
-        ctx.lineJoin = 'round';
         ctx.beginPath();
-        let pathStarted = false;
-        for (let x = 0; x <= width; x += 2) {
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.lineWidth = 4;
+        let first = true;
+        for (let x = 0; x <= width; x += 1) {
             const y = getSurfaceY(x);
-            if (y === null) {
-                pathStarted = false;
-                continue;
-            }
-            if (!pathStarted) {
-                ctx.moveTo(x, y);
-                pathStarted = true;
-            } else {
-                ctx.lineTo(x, y);
-            }
+            if (y === null) { first = true; continue; }
+            if (first) { ctx.moveTo(x, y); first = false; }
+            else ctx.lineTo(x, y);
         }
         ctx.stroke();
 
-        // Under-ramp shadow/fill
+        // Under-ramp shadow
         ctx.lineTo(width, height);
         ctx.lineTo(0, height);
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
         ctx.fill();
     } else {
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-        ctx.beginPath(); ctx.moveTo(0, height-ball.radius); ctx.lineTo(width, height-ball.radius); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, height - ball.radius); ctx.lineTo(width, height - ball.radius); ctx.stroke();
     }
 
-    // Ball
+    // Draw Ball
     ctx.shadowBlur = 20; ctx.shadowColor = ball.color;
     ctx.fillStyle = ball.color;
     ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI*2); ctx.fill();
