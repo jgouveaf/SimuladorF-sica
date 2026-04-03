@@ -3,75 +3,134 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FísicaSim PRO V3</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <title>FísicaSim PRO - Versão Super-U</title>
+    <style>
+        :root { --p: #6366f1; --bg: #0f172a; --txt: #f8fafc; }
+        body { background: var(--bg); color: var(--txt); font-family: 'Inter', sans-serif; display: flex; flex-direction: column; height: 100vh; margin: 0; }
+        header { padding: 1rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        main { display: grid; grid-template-columns: 300px 1fr; flex: 1; padding: 1rem; gap: 1rem; }
+        .side { background: rgba(30, 41, 59, 0.7); padding: 1.5rem; border-radius: 1rem; border: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; gap: 1rem; }
+        .sim { background: #000; border-radius: 1rem; position: relative; overflow: hidden; border: 1px solid var(--p); }
+        canvas { width: 100%; height: 100%; }
+        select, input, button { width: 100%; padding: 0.5rem; border-radius: 0.5rem; margin-top: 0.2rem; }
+        button { background: var(--p); color: white; border: none; font-weight: bold; cursor: pointer; }
+        .label { font-size: 0.8rem; opacity: 0.7; display: flex; justify-content: space-between; }
+        .energy-box { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); padding: 10px 20px; border-radius: 10px; border: 2px solid var(--p); }
+    </style>
 </head>
 <body>
-    <header>
-        <h1>FísicaSim PRO <span style="font-size: 0.8rem; background: var(--primary); padding: 2px 6px; border-radius: 4px; vertical-align: middle;">V3</span></h1>
-        <p class="subtitle">Simulador de Energia Mecânica (Versão Simplificada)</p>
-    </header>
-
+    <header><h1>FísicaSim PRO <span style="font-size: 0.8rem; background: #e11d48; padding: 2px 8px; border-radius: 10px;">ATUALIZADO V3</span></h1></header>
     <main>
-        <section class="controls">
-            <h2 style="color: var(--primary); margin-bottom: 1rem;">Configurações</h2>
-            
-            <div class="control-group">
-                <label><strong>Cenário:</strong></label>
-                <select id="scenario">
-                    <option value="free">Queda Livre</option>
-                    <option value="ramp">Rampa</option>
-                    <option value="parabola">Parábola (U)</option>
-                    <option value="loop">Looping</option>
-                </select>
-            </div>
-
-            <div class="control-group">
-                <label>Tempo: <span id="val-timescale">1.0</span>x</label>
-                <input type="range" id="timescale" min="0.1" max="2.0" step="0.1" value="1.0">
-            </div>
-
-            <hr style="border:0; border-top:1px solid rgba(255,255,255,0.1); margin:1rem 0;">
-
-            <div class="control-group">
-                <label>Massa: <span id="val-mass">10</span>kg</label>
-                <input type="range" id="mass" min="1" max="100" value="10">
-            </div>
-
-            <div class="control-group">
-                <label>Atrito: <span id="val-friction">1</span>%</label>
-                <input type="range" id="friction" min="0" max="10" step="0.1" value="1">
-            </div>
-
-            <div class="button-group">
-                <button id="btn-reset" class="secondary">Resetar</button>
-                <button id="btn-pause">Pausar</button>
-            </div>
-
-            <div class="control-group" style="margin-top: 1rem;">
-                <label style="cursor:pointer;"><input type="checkbox" id="check-bar" checked> Mostrar Gráfico</label>
-                <label style="cursor:pointer;"><input type="checkbox" id="check-slow"> Câmera Lenta</label>
-            </div>
-        </section>
-
-        <section class="sim-container" id="sim-container">
+        <div class="side">
+            <div><label class="label">Escolha a Pista:</label>
+            <select id="scenario">
+                <option value="free">Queda Livre (Quica Muito!)</option>
+                <option value="parabola">Tigela em Formato de U (∪)</option>
+                <option value="ramp">Rampa Reta</option>
+                <option value="loop">Looping Ondulado</option>
+            </select></div>
+            <div><label class="label">Massa (kg): <span id="v-mass">10</span></label><input type="range" id="mass" min="1" max="50" value="10"></div>
+            <div><label class="label">Atrito (%): <span id="v-fric">1.0</span></label><input type="range" id="fric" min="0" max="10" step="0.1" value="1"></div>
+            <button id="btn-reset">Resetar Bola</button>
+            <button id="btn-pause" style="background:#475569;">Pausar</button>
+            <div style="font-size: 0.7rem; opacity: 0.6; margin-top: auto;">Versão V3: U-Parabola e Super-Quique ativos.</div>
+        </div>
+        <div class="sim" id="container">
             <canvas id="canvas"></canvas>
-            <div style="position: absolute; bottom: 20px; width: 100%; text-align: center; pointer-events: none;">
-                <div style="background: rgba(0,0,0,0.5); display: inline-block; padding: 10px 20px; border-radius: 10px; border: 1px solid var(--primary);">
-                    <span style="color: var(--text-muted); font-size: 0.8rem;">ENERGIA TOTAL:</span><br>
-                    <span id="val-te" style="color: var(--te-color); font-size: 1.5rem; font-weight: 800;">0.0 J</span>
-                </div>
+            <div class="energy-box">
+                <div style="font-size: 0.7rem; color: #94a3b8; text-align: center;">ENERGIA MECÂNICA TOTAL:</div>
+                <div id="val-te" style="font-size: 1.5rem; font-weight: 800; color: #fbbf24; text-align: center;">0.0 J</div>
             </div>
-        </section>
+        </div>
     </main>
+    <script>
+        const canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d'), container = document.getElementById('container');
+        const get = id => document.getElementById(id);
+        const massIn = get('mass'), fricIn = get('fric'), scenSel = get('scenario'), btnReset = get('btn-reset'), btnPause = get('btn-pause');
 
-    <footer style="margin-top: 2rem; opacity: 0.5;">
-        FísicaSim PRO v3.0 - Última Atualização: Hoje
-    </footer>
+        let w, h, isPaused = false, isDrag = false;
+        let ball = { x: 0, y: 0, r: 20, vx: 0, vy: 0, m: 10, f: 0.01, te: 0 };
+        let scenario = 'free', maxE = 100, totTE = 0;
 
-    <script src="physics.js?v=3"></script>
+        const getY = (x) => {
+            if (scenario === 'free') return h - 60;
+            const mid = w/2, side = (w-200)/2;
+            if (scenario === 'parabola') {
+                const bottom = h-80, top = 180, depth = bottom-top;
+                const dist = Math.max(-side, Math.min(side, x - mid));
+                return top + depth * (1 - Math.pow(dist / side, 2)); // Correct U shape logic
+            }
+            if (scenario === 'ramp') return x < 100 ? 150 : (x > w-100 ? h-100 : 150 + (x-100)*(h-250)/(w-200));
+            if (scenario === 'loop') return h/2 + 100*Math.sin(x*0.015) + 120;
+            return h - 60;
+        };
+
+        function reset() {
+            if (scenario === 'free') { ball.x = w/2; ball.y = 100; }
+            else if (scenario === 'parabola') { ball.x = w/2 - (w-300)/2; ball.y = 150; }
+            else { ball.x = 120; ball.y = getY(120)-40; }
+            ball.vx = 0; ball.vy = 0; ball.te = 0;
+        }
+
+        function resize() { w = container.clientWidth; h = container.clientHeight; canvas.width = w; canvas.height = h; reset(); }
+        window.onresize = resize; resize();
+
+        massIn.oninput = () => { ball.m = +massIn.value; get('v-mass').innerText = ball.m; };
+        fricIn.oninput = () => { ball.f = (+fricIn.value/100)*1.5; get('v-fric').innerText = fricIn.value; };
+        scenSel.onchange = () => { scenario = scenSel.value; reset(); };
+        btnReset.onclick = reset;
+        btnPause.onclick = () => { isPaused = !isPaused; btnPause.innerText = isPaused ? 'Retomar' : 'Pausar'; };
+
+        canvas.onmousedown = (e) => { const r = canvas.getBoundingClientRect(); if (Math.hypot(e.clientX-r.left-ball.x, e.clientY-r.top-ball.y) < 60) isDrag = true; };
+        window.onmousemove = (e) => { if (!isDrag) return; const r = canvas.getBoundingClientRect(); ball.x = e.clientX-r.left; ball.y = e.clientY-r.top; ball.vx = 0; ball.vy = 0; ball.te = 0; };
+        window.onmouseup = () => isDrag = false;
+
+        function update() {
+            if (!isPaused && !isDrag) {
+                const steps = 15, dt = (1/60)/steps, g = 9.8 * 60;
+                for (let i=0; i<steps; i++) {
+                    ball.vy += g * dt;
+                    ball.x += ball.vx * dt; ball.y += ball.vy * dt;
+                    if (ball.x < ball.r) { ball.x = ball.r; ball.vx = Math.abs(ball.vx)*0.5; }
+                    if (ball.x > w-ball.r) { ball.x = w-ball.r; ball.vx = -Math.abs(ball.vx)*0.5; }
+                    const gy = getY(ball.x);
+                    if (ball.y + ball.r > gy) {
+                        ball.y = gy - ball.r;
+                        const y1 = getY(ball.x-0.5), y2 = getY(ball.x+0.5), tx = 1, ty = y2-y1, l = Math.hypot(tx,ty), ntx = tx/l, nty = ty/l;
+                        const vdt = ball.vx*ntx + ball.vy*nty;
+                        const oldS = Math.abs(vdt), loss = ball.f*4*dt;
+                        ball.vx = vdt*ntx*(1-loss); ball.vy = vdt*nty*(1-loss);
+                        ball.te += Math.max(0, 0.5*ball.m*(Math.pow(oldS/60,2) - Math.pow(Math.abs(vdt*(1-loss))/60,2)));
+                    }
+                    if (ball.y > h-ball.r) { ball.y = h-ball.r; if (Math.abs(ball.vy) > 20) ball.vy *= -0.8; else ball.vy = 0; }
+                }
+            }
+            const pe = ball.m * 9.8 * Math.max(0, (h-60-ball.r-ball.y)/60);
+            const ke = 0.5 * ball.m * Math.pow(Math.hypot(ball.vx, ball.vy)/60, 2);
+            totTE = pe + ke + ball.te; if (totTE > maxE) maxE = totTE;
+            get('val-te').innerText = totTE.toFixed(1) + ' J';
+
+            ctx.clearRect(0,0,w,h);
+            ctx.beginPath(); ctx.strokeStyle = '#1e1b4b'; ctx.lineWidth = 15; ctx.lineCap='round';
+            for (let x=0; x<=w; x+=3) scenario==='free' ? (x===0?ctx.moveTo(x,h-40):ctx.lineTo(x,h-40)) : (x===0?ctx.moveTo(x,getY(x)+8):ctx.lineTo(x,getY(x)+8));
+            ctx.stroke();
+            ctx.beginPath(); ctx.strokeStyle = '#4f46e5'; ctx.lineWidth = 6;
+            for (let x=0; x<=w; x+=3) scenario==='free' ? (x===0?ctx.moveTo(x,h-50):ctx.lineTo(x,h-50)) : (x===0?ctx.moveTo(x,getY(x)):ctx.lineTo(x,getY(x)));
+            ctx.stroke();
+            ctx.shadowBlur = 15; ctx.shadowColor = '#6366f1'; ctx.fillStyle = '#818cf8';
+            ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2); ctx.fill();
+            ctx.shadowBlur =0;
+
+            const bx=20, by=20, bw=140, bh=160;
+            ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.beginPath(); ctx.roundRect(bx,by,bw,bh,10); ctx.fill();
+            const drawB = (v, c, i, l) => {
+                const h_ = (v/maxE)*(bh-40); ctx.fillStyle = c; ctx.fillRect(bx+15+i*30, by+bh-25-h_, 18, h_);
+                ctx.fillStyle='white'; ctx.font='bold 9px Arial'; ctx.fillText(l, bx+15+i*30, by+bh-10);
+            };
+            drawB(ke, '#22c55e', 0, 'Cin'); drawB(pe, '#3b82f6', 1, 'Pot'); drawB(ball.te, '#ef4444', 2, 'Tér'); drawB(totTE, '#f59e0b', 3, 'Tot');
+            requestAnimationFrame(update);
+        }
+        update();
+    </script>
 </body>
 </html>
