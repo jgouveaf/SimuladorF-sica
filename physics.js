@@ -21,7 +21,7 @@ const keBar = getElem('bar-ke'), peBar = getElem('bar-pe'), teBar = getElem('bar
 const btnPause = getElem('btn-pause'), btnReset = getElem('btn-reset');
 
 // State
-let width, height;
+let width = 800, height = 600;
 const pixelsToMeters = 60;
 let isPaused = false, isDragging = false;
 let timeScale = 1.0;
@@ -36,25 +36,28 @@ let ball = {
 
 // --- Ramps Definition ---
 const getSurfaceY = (x) => {
-    const margin = 80;
-    const safeWidth = width - margin * 2;
-    
     if (currentScenario === 'free') return height - ball.radius;
     
     if (currentScenario === 'ramp') {
-        const startY = 150, endY = height - 80;
+        const margin = 100;
+        const startY = 150, endY = height - 100;
         if (x < margin) return startY;
         if (x > width - margin) return endY;
-        return startY + (x - margin) * (endY - startY) / safeWidth;
+        return startY + (x - margin) * (endY - startY) / (width - margin * 2);
     }
     
     if (currentScenario === 'parabola') {
-        // Corrected Bowl (∪ shape)
+        // TRUE BOWL (U SHAPE ∪)
+        // Lowest point at center Y = height - 100
+        // Highest points at edges Y = 100
         const centerX = width / 2;
-        const depth = 350;
-        const k = 0.002;
-        // height - (offset + growth)
-        return (height - 80) - Math.max(0, depth - k * Math.pow(x - centerX, 2));
+        const bottomY = height - 100;
+        const depth = 400; // Total height of the U
+        const bowlWidth = (width - 200) / 2;
+        const k = depth / Math.pow(bowlWidth, 2);
+        
+        let dy = k * Math.pow(x - centerX, 2);
+        return bottomY - Math.min(depth + 50, dy);
     }
     
     if (currentScenario === 'loop') {
@@ -63,7 +66,6 @@ const getSurfaceY = (x) => {
     return height - ball.radius;
 };
 
-// Physics Helpers
 function getSurfaceNormal(x) {
     const y1 = getSurfaceY(x - 0.5);
     const y2 = getSurfaceY(x + 0.5);
@@ -77,9 +79,9 @@ function reset() {
     if (currentScenario === 'free') {
         ball.x = width / 2; ball.y = 100;
     } else if (currentScenario === 'parabola') {
-        ball.x = 100; ball.y = getSurfaceY(100) - ball.radius - 20;
+        ball.x = 150; ball.y = getSurfaceY(150) - ball.radius - 10;
     } else {
-        ball.x = 100; ball.y = 100;
+        ball.x = 150; ball.y = 150;
     }
     ball.vx = 0; ball.vy = 0;
 }
@@ -93,7 +95,6 @@ function resize() {
 }
 
 window.addEventListener('resize', resize);
-resize();
 
 // UI Observers
 massInput.oninput = (e) => { ball.mass = +e.target.value; valMass.innerText = ball.mass; };
@@ -124,7 +125,7 @@ function update() {
     if (!isPaused && !isDragging) {
         const dt = (1/60) * timeScale;
         const g_px = ball.gravity * pixelsToMeters;
-        const steps = 10;
+        const steps = 12;
         const sdt = dt / steps;
 
         for (let i = 0; i < steps; i++) {
@@ -135,27 +136,25 @@ function update() {
             ball.x += ball.vx * sdt;
             ball.y += ball.vy * sdt;
 
-            // Constrain X to prevent hitting walls in scenarios
-            const margin = ball.radius + 10;
-            if (ball.x < margin) { ball.x = margin; ball.vx = Math.abs(ball.vx) * 0.4; }
-            if (ball.x > width - margin) { ball.x = width - margin; ball.vx = -Math.abs(ball.vx) * 0.4; }
+            // X constraints
+            if (ball.x < ball.radius) { ball.x = ball.radius; ball.vx = Math.abs(ball.vx) * 0.3; }
+            if (ball.x > width - ball.radius) { ball.x = width - ball.radius; ball.vx = -Math.abs(ball.vx) * 0.3; }
 
             const groundY = getSurfaceY(ball.x);
             if (ball.y + ball.radius > groundY) {
                 const norm = getSurfaceNormal(ball.x);
                 ball.y = groundY - ball.radius;
                 const v_dot_t = (ball.vx * norm.tx + ball.vy * norm.ty);
-                const surfaceFriction = 1 - (ball.friction * 4 * sdt); 
-                ball.vx = v_dot_t * norm.tx * surfaceFriction;
-                ball.vy = v_dot_t * norm.ty * surfaceFriction;
-                if (Math.abs(ball.vy) < 1) ball.vy = 0;
+                const surfFric = 1 - (ball.friction * 4 * sdt); 
+                ball.vx = v_dot_t * norm.tx * surfFric;
+                ball.vy = v_dot_t * norm.ty * surfFric;
+                if (Math.abs(ball.vy) < 0.5) ball.vy = 0;
             }
-
-            if (ball.y > height - ball.radius) { ball.y = height - ball.radius; ball.vy = -Math.abs(ball.vy) * 0.4; }
+            if (ball.y > height - ball.radius) { ball.y = height - ball.radius; ball.vy *= -0.3; }
         }
     }
 
-    // Energy
+    // Displays
     const h = Math.max(0, (height - ball.radius - ball.y) / pixelsToMeters);
     const speed = Math.hypot(ball.vx, ball.vy) / pixelsToMeters;
     const PE = ball.mass * ball.gravity * h;
@@ -165,10 +164,9 @@ function update() {
     keLabel.innerText = KE.toFixed(1) + ' J';
     peLabel.innerText = PE.toFixed(1) + ' J';
     teLabel.innerText = TE.toFixed(1) + ' J';
-    
-    const baseScale = Math.max(TE, 2000);
-    keBar.style.width = Math.min(100, (KE / baseScale) * 100) + '%';
-    peBar.style.width = Math.min(100, (PE / baseScale) * 100) + '%';
+    const base = Math.max(TE, 2000);
+    keBar.style.width = (KE / base) * 100 + '%';
+    peBar.style.width = (PE / base) * 100 + '%';
     teBar.style.width = '100%';
 
     render();
@@ -180,8 +178,8 @@ function render() {
 
     // Draw Surface
     ctx.beginPath();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-    ctx.lineWidth = 4;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.lineWidth = 5;
     for (let x = 0; x <= width; x += 1) {
         const y = getSurfaceY(x);
         if (x === 0) ctx.moveTo(x, y);
@@ -194,11 +192,13 @@ function render() {
     ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
     ctx.fill();
 
-    // Draw Ball
+    // Ball
     ctx.shadowBlur = 20; ctx.shadowColor = ball.color;
     ctx.fillStyle = ball.color;
     ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI*2); ctx.fill();
     ctx.shadowBlur = 0;
 }
 
+// Initial resize
+resize();
 update();
