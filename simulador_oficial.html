@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FísicaSim PRO - OFICIAL V3</title>
+    <title>FísicaSim PRO - Versão Super-Quique</title>
     <style>
         :root { --p: #6366f1; --bg: #020617; --card: rgba(30, 41, 59, 0.8); }
         * { box-sizing: border-box; }
-        body { background: var(--bg); color: white; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; flex-direction: column; height: 100vh; margin: 0; overflow: hidden; }
+        body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; display: flex; flex-direction: column; height: 100vh; margin: 0; overflow: hidden; }
         header { padding: 10px; text-align: center; background: rgba(0,0,0,0.5); border-bottom: 2px solid var(--p); }
         main { display: grid; grid-template-columns: 280px 1fr; flex: 1; padding: 15px; gap: 15px; }
         .side { background: var(--card); padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; gap: 15px; }
@@ -21,63 +21,73 @@
     </style>
 </head>
 <body>
-    <header><h1>FísicaSim OFICIAL <span style="font-size: 12px; background: #22c55e; color: black; padding: 2px 8px; border-radius: 4px; vertical-align: middle;">VERSÃO 3.0</span></h1></header>
+    <header><h1>FísicaSim PRO <span style="font-size: 12px; background: #22c55e; color: black; padding: 2px 8px; border-radius: 4px; vertical-align: middle;">VERSÃO COM QUIQUE</span></h1></header>
     <main>
         <div class="side">
-            <div><label class="label">Configurar Cenário:</label>
+            <div><label class="label">Cenários de Pista:</label>
             <select id="scen">
-                <option value="u">Tigela em Formato de U (∪)</option>
-                <option value="free">Queda Livre (Quica!)</option>
+                <option value="loop">Pista Ondulada (Ir e Voltar)</option>
+                <option value="free">Queda Livre (Quique!)</option>
+                <option value="u">Tigela em Formato de U</option>
                 <option value="ramp">Rampa Inclinada</option>
-                <option value="loop">Pista Ondulada</option>
             </select></div>
-            <div><label class="label">Massa do Objeto (kg): <span id="v-m">10</span></label><input type="range" id="m" min="1" max="50" value="10"></div>
-            <div><label class="label">Resistência/Atrito (%): <span id="v-f">1.0</span></label><input type="range" id="f" min="0" max="10" step="0.1" value="1"></div>
-            <button id="reset">Resetar Simulação</button>
+            <div><label class="label">Atrito / Fricção (%): <span id="v-f">1.0</span></label><input type="range" id="f" min="0" max="10" step="0.1" value="1"></div>
+            <div><label class="label">Elasticidade (Quique): <span id="v-e">70</span>%</label><input type="range" id="bounce" min="0" max="100" value="70"></div>
+            <button id="reset">Resetar Bola</button>
             <button id="pause" style="background:#64748b;">Pausar</button>
-            <div style="margin-top: auto; font-size: 10px; opacity: 0.5; text-align: center;">Física de Conservação de Energia ativada.</div>
+            <div style="margin-top: auto; font-size: 10px; opacity: 0.5; text-align: center;">Clique e Arraste a bola para soltá-la de qualquer lugar!</div>
         </div>
         <div class="sim" id="cont">
             <canvas id="cv"></canvas>
             <div class="stats-box">
-                <div style="font-size: 10px; opacity: 0.6; text-align: center;">ENERGIA MECÂNICA TOTAL:</div>
+                <div style="font-size: 10px; opacity: 0.6; text-align: center;">ENERGIA TOTAL:</div>
                 <div id="te-val" style="font-size: 24px; font-weight: 900; color: #fbbf24; text-align: center;">0.0 J</div>
             </div>
         </div>
     </main>
     <script>
         const cv = document.getElementById('cv'), ctx = cv.getContext('2d'), cont = document.getElementById('cont');
-        const mIn = document.getElementById('m'), fIn = document.getElementById('f'), scSe = document.getElementById('scen'), bRe = document.getElementById('reset'), bPa = document.getElementById('pause');
+        const fIn = document.getElementById('f'), eIn = document.getElementById('bounce'), scSe = document.getElementById('scen'), bRe = document.getElementById('reset'), bPa = document.getElementById('pause');
 
         let w, h, paused = false, drag = false;
-        let b = { x:0, y:0, r:18, vx:0, vy:0, m:10, f:0.01, th:0 };
-        let scenario = 'u', maxE = 100;
+        let b = { x:0, y:0, r:18, vx:0, vy:0, m:10, f:0.01, th:0, elast: 0.7 };
+        let scenario = 'loop', maxE = 100;
 
         const getY = (x) => {
-            if (scenario === 'free') return h - 50;
+            if (scenario === 'free') return h - 60;
             const mid = w/2, sw = (w-200)/2;
             if (scenario === 'u') {
                 const bot = h-80, top = 180, d = bot-top;
                 const dist = Math.max(-sw, Math.min(sw, x-mid));
-                return top + d * (1 - Math.pow(dist/sw, 2)); // PARABOLA EM U (BOWL)
+                return top + d * (1 - Math.pow(dist/sw, 2));
             }
-            if (scenario === 'ramp') return x < 100 ? 150 : (x > w-100 ? h-100 : 150 + (x-100)*(h-250)/(w-200));
-            if (scenario === 'loop') return h/2 + 100*Math.sin(x*0.015) + 120;
-            return h-50;
+            if (scenario === 'ramp') {
+                if (x < 100) return 150 - (100-x)*2;
+                if (x > w-100) return h-100 - (x-(w-100))*2;
+                return 150 + (x-100)*(h-250)/(w-200);
+            }
+            if (scenario === 'loop') {
+                const base = h/2 + 80*Math.sin(x*0.018) + 120;
+                // CURVA DE RETORNO NAS BORDAS:
+                if (x < 150) return base - Math.pow(150-x, 2)*0.08;
+                if (x > w-150) return base - Math.pow(x-(w-150), 2)*0.08;
+                return base;
+            }
+            return h-60;
         };
 
         function reset() {
-            if (scenario === 'u') { b.x = w/2 - (w-300)/2; b.y = 170; }
-            else if (scenario === 'free') { b.x = w/2; b.y = 100; }
-            else { b.x = 120; b.y = getY(120)-40; }
+            if (scenario === 'loop') { b.x = 200; b.y = getY(200)-50; }
+            else if (scenario === 'u') { b.x = 150; b.y = getY(150)-50; }
+            else { b.x = w/2; b.y = 100; }
             b.vx = 0; b.vy = 0; b.th = 0;
         }
 
         function resize() { w = cont.clientWidth; h = cont.clientHeight; cv.width = w; cv.height = h; reset(); }
         window.onresize = resize; resize();
 
-        mIn.oninput = () => { b.m = +mIn.value; document.getElementById('v-m').innerText = b.m; };
         fIn.oninput = () => { b.f = (+fIn.value/100)*1.5; document.getElementById('v-f').innerText = fIn.value; };
+        eIn.oninput = () => { b.elast = +eIn.value/100; document.getElementById('v-e').innerText = eIn.value; };
         scSe.onchange = () => { scenario = scSe.value; reset(); };
         bRe.onclick = reset;
         bPa.onclick = () => { paused = !paused; bPa.innerText = paused ? 'Retomar' : 'Pausar'; };
@@ -91,20 +101,30 @@
                 const n = 15, dt = (1/60)/n, g = 9.8 * 60;
                 for (let i=0; i<n; i++) {
                     b.vy += g * dt; b.x += b.vx * dt; b.y += b.vy * dt;
-                    if (b.x < b.r) { b.x = b.r; b.vx = Math.abs(b.vx)*0.5; }
-                    if (b.x > w-b.r) { b.x = w-b.r; b.vx = -Math.abs(b.vx)*0.5; }
+                    if (b.x < b.r) { b.x = b.r; b.vx = Math.abs(b.vx)*0.4; }
+                    if (b.x > w-b.r) { b.x = w-b.r; b.vx = -Math.abs(b.vx)*0.4; }
+                    
                     const gy = getY(b.x);
                     if (b.y + b.r > gy) {
-                        b.y = gy - b.r;
                         const y1 = getY(b.x-0.5), y2 = getY(b.x+0.5), tx = 1, ty = y2-y1, l = Math.hypot(tx,ty), ntx = tx/l, nty = ty/l;
-                        const vdt = b.vx*ntx + b.vy*nty, oldS = Math.abs(vdt), loss = b.f*4*dt;
-                        b.vx = vdt*ntx*(1-loss); b.vy = vdt*nty*(1-loss);
-                        b.th += Math.max(0, 0.5*b.m*(Math.pow(oldS/60,2) - Math.pow(Math.abs(vdt*(1-loss))/60,2)));
+                        const nx = -nty, ny = ntx; // Vetor Normal
+                        
+                        b.y = gy - b.r;
+                        const vdt = b.vx*ntx + b.vy*nty, vdn = b.vx*nx + b.vy*ny;
+                        
+                        if (vdn > 0) { // Indo para dentro da pista
+                            b.vx = vdt*ntx - vdn*nx*b.elast; b.vy = vdt*nty - vdn*ny*b.elast; // O QUIQUE!
+                        } else {
+                            b.vx = vdt*ntx; b.vy = vdt*nty;
+                        }
+                        
+                        const loss = b.f*4*dt; b.vx *= (1-loss); b.vy *= (1-loss);
+                        b.th += Math.max(0, 0.5*b.m*(Math.pow(Math.hypot(b.vx/60, b.vy/60),2)*loss));
                     }
-                    if (b.y > h-b.r) { b.y = h-b.r; if (Math.abs(b.vy) > 20) b.vy *= -0.75; else b.vy = 0; }
+                    if (b.y > h-b.r) { b.y = h-b.r; if (Math.abs(b.vy) > 20) b.vy *= -b.elast; else b.vy = 0; }
                 }
             }
-            const pe = b.m * 9.8 * Math.max(0, (h-50-b.r-b.y)/60);
+            const pe = b.m * 9.8 * Math.max(0, (h-60-b.r-b.y)/60);
             const ke = 0.5 * b.m * Math.pow(Math.hypot(b.vx, b.vy)/60, 2);
             const te = pe + ke + b.th; if (te > maxE) maxE = te;
             document.getElementById('te-val').innerText = te.toFixed(1) + ' J';
