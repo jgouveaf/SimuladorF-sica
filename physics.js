@@ -28,18 +28,17 @@ let timeScale = 1.0;
 let currentScenario = 'free';
 
 let ball = {
-    x: 0, y: 0, radius: 12,
+    x: 0, y: 0, radius: 15,
     vx: 0, vy: 0,
-    mass: 10, gravity: 9.8, friction: 0.01,
+    mass: 10, gravity: 9.8, friction: 0.05,
     color: '#6366f1'
 };
 
 // --- Ramps Definition ---
 const getSurfaceY = (x) => {
-    if (currentScenario === 'free') return null;
+    if (currentScenario === 'free') return height - ball.radius;
     
     if (currentScenario === 'ramp') {
-        // Linear ramp from 100 to height-50
         const startX = 50, endX = width - 50;
         const startY = 150, endY = height - 50;
         if (x < startX) return startY;
@@ -54,26 +53,26 @@ const getSurfaceY = (x) => {
     }
     
     if (currentScenario === 'loop') {
-        return height/2 + 80 * Math.sin(x * 0.015) + 100;
+        return height/2 + 100 * Math.sin(x * 0.015) + 120;
     }
-    return null;
+    return height - ball.radius;
 };
 
 // Physics Helpers
-function getSurfaceInfo(x) {
-    const y = getSurfaceY(x);
-    if (y === null) return null;
-    const dx = 0.5;
-    const y2 = getSurfaceY(x + dx);
-    const angle = Math.atan2(y2 - y, dx);
-    return { y, angle, tx: Math.cos(angle), ty: Math.sin(angle) };
+function getSurfaceNormal(x) {
+    const y1 = getSurfaceY(x - 0.5);
+    const y2 = getSurfaceY(x + 0.5);
+    const dx = 1.0;
+    const dy = y2 - y1;
+    const len = Math.hypot(dx, dy);
+    return { nx: -dy / len, ny: dx / len, tx: dx / len, ty: dy / len };
 }
 
 function reset() {
     if (currentScenario === 'free') {
         ball.x = width / 2; ball.y = 100;
     } else {
-        ball.x = 60; ball.y = getSurfaceY(60) - ball.radius - 50;
+        ball.x = 80; ball.y = getSurfaceY(80) - ball.radius - 20;
     }
     ball.vx = 0; ball.vy = 0;
 }
@@ -92,7 +91,7 @@ resize();
 // UI Observers
 massInput.oninput = (e) => { ball.mass = +e.target.value; valMass.innerText = ball.mass; };
 gravityInput.oninput = (e) => { ball.gravity = +e.target.value; valGravity.innerText = ball.gravity; };
-frictionInput.oninput = (e) => { ball.friction = +e.target.value / 100; valFriction.innerText = e.target.value; };
+frictionInput.oninput = (e) => { ball.friction = (+e.target.value / 100) * 2; valFriction.innerText = e.target.value; };
 timescaleInput.oninput = (e) => { timeScale = +e.target.value; valTimescale.innerText = timeScale.toFixed(1); };
 scenarioSelect.onchange = (e) => { currentScenario = e.target.value; reset(); };
 btnPause.onclick = () => { isPaused = !isPaused; btnPause.innerText = isPaused ? 'Retomar' : 'Pausar'; };
@@ -102,7 +101,10 @@ btnReset.onclick = reset;
 canvas.onmousedown = (e) => {
     const rect = canvas.getBoundingClientRect();
     const mx = e.clientX - rect.left, my = e.clientY - rect.top;
-    if (Math.hypot(mx - ball.x, my - ball.y) < ball.radius * 3) isDragging = true;
+    if (Math.hypot(mx - ball.x, my - ball.y) < ball.radius * 3) {
+        isDragging = true;
+        isPaused = false; // Resume on drag
+    }
 };
 window.onmousemove = (e) => {
     if (!isDragging) return;
@@ -119,43 +121,43 @@ function update() {
         const dt = (1/60) * timeScale;
         const g_px = ball.gravity * pixelsToMeters;
         
-        let subSteps = 5; // Use sub-stepping for stability
-        let subDt = dt / subSteps;
+        // Sub-stepping for stability
+        const steps = 8;
+        const sdt = dt / steps;
 
-        for (let s = 0; s < subSteps; s++) {
-            const surface = getSurfaceInfo(ball.x);
-            const onSurface = surface && (ball.y + ball.radius >= surface.y - 2);
+        for (let i = 0; i < steps; i++) {
+            // Apply Gravity
+            ball.vy += g_px * sdt;
+            
+            // Apply Friction (Air)
+            ball.vx *= (1 - ball.friction * sdt);
+            ball.vy *= (1 - ball.friction * sdt);
 
-            if (onSurface) {
-                // Motion along the slope
-                const tangentAccel = g_px * surface.ty;
-                let v = (ball.vx * surface.tx + ball.vy * surface.ty);
+            // Move
+            ball.x += ball.vx * sdt;
+            ball.y += ball.vy * sdt;
+
+            // Collision Resolution
+            const groundY = getSurfaceY(ball.x);
+            if (ball.y + ball.radius > groundY) {
+                // Ball is penetrating ground
+                const norm = getSurfaceNormal(ball.x);
                 
-                v += tangentAccel * subDt;
-                v *= (1 - ball.friction * subDt * 10);
+                // 1. Position correction
+                ball.y = groundY - ball.radius;
+
+                // 2. Velocity resolution (Slide along tangent)
+                // Project velocity onto tangent: V_new = (V dot T) * T
+                const v_dot_t = (ball.vx * norm.tx + ball.vy * norm.ty);
                 
-                ball.vx = v * surface.tx;
-                ball.vy = v * surface.ty;
-                ball.x += ball.vx * subDt;
-                ball.y = surface.y - ball.radius;
-            } else {
-                // Free fall
-                ball.vy += g_px * subDt;
-                ball.vx *= (1 - ball.friction * subDt * 2);
-                ball.vy *= (1 - ball.friction * subDt * 2);
+                // Surface Friction
+                const surfaceFriction = 1 - (ball.friction * 5 * sdt); 
                 
-                ball.x += ball.vx * subDt;
-                ball.y += ball.vy * subDt;
+                ball.vx = v_dot_t * norm.tx * surfaceFriction;
+                ball.vy = v_dot_t * norm.ty * surfaceFriction;
                 
-                // Ground/Surface crash check
-                const sAfter = getSurfaceInfo(ball.x);
-                if (sAfter && ball.y + ball.radius >= sAfter.y) {
-                    ball.y = sAfter.y - ball.radius;
-                    // Project velocity to tangent
-                    const vDotT = (ball.vx * sAfter.tx + ball.vy * sAfter.ty);
-                    ball.vx = vDotT * sAfter.tx;
-                    ball.vy = vDotT * sAfter.ty;
-                }
+                // Add tiny jump prevention
+                if (Math.abs(ball.vy) < 1) ball.vy = 0;
             }
 
             // Wall Bounce
@@ -176,10 +178,11 @@ function update() {
     peLabel.innerText = PE.toFixed(1) + ' J';
     teLabel.innerText = TE.toFixed(1) + ' J';
     
-    const displayMax = 10000;
-    keBar.style.width = Math.min(100, (KE / displayMax) * 300) + '%';
-    peBar.style.width = Math.min(100, (PE / displayMax) * 300) + '%';
-    teBar.style.width = Math.min(100, (TE / displayMax) * 300) + '%';
+    // Progress bars (relative to total energy at start usually, but let's use 5000 as base)
+    const baseScale = Math.max(TE, 2000);
+    keBar.style.width = Math.min(100, (KE / baseScale) * 100) + '%';
+    peBar.style.width = Math.min(100, (PE / baseScale) * 100) + '%';
+    teBar.style.width = '100%';
 
     render();
     requestAnimationFrame(update);
@@ -189,28 +192,21 @@ function render() {
     ctx.clearRect(0, 0, width, height);
 
     // Draw Surface
-    if (currentScenario !== 'free') {
-        ctx.beginPath();
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-        ctx.lineWidth = 4;
-        let first = true;
-        for (let x = 0; x <= width; x += 1) {
-            const y = getSurfaceY(x);
-            if (y === null) { first = true; continue; }
-            if (first) { ctx.moveTo(x, y); first = false; }
-            else ctx.lineTo(x, y);
-        }
-        ctx.stroke();
-
-        // Under-ramp shadow
-        ctx.lineTo(width, height);
-        ctx.lineTo(0, height);
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-        ctx.fill();
-    } else {
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-        ctx.beginPath(); ctx.moveTo(0, height - ball.radius); ctx.lineTo(width, height - ball.radius); ctx.stroke();
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.lineWidth = 4;
+    for (let x = 0; x <= width; x += 1) {
+        const y = getSurfaceY(x);
+        if (x === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
     }
+    ctx.stroke();
+
+    // Fill area below surface
+    ctx.lineTo(width, height);
+    ctx.lineTo(0, height);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+    ctx.fill();
 
     // Draw Ball
     ctx.shadowBlur = 20; ctx.shadowColor = ball.color;
