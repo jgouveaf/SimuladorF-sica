@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FísicaSim PRO - Versão Definitiva</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --bg-dark: #0f172a;
+            --bg-card: rgba(30, 41, 59, 0.7);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --ke-color: #22c55e;
+            --pe-color: #3b82f6;
+            --te-color: #f59e0b;
+            --thermal-color: #ef4444;
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background-image: radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%);
+        }
+
+        header { padding: 1rem; text-align: center; }
+        h1 { font-size: 1.5rem; background: linear-gradient(to right, #818cf8, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        main { flex: 1; display: grid; grid-template-columns: 320px 1fr; gap: 1rem; padding: 0 1rem 1rem; max-width: 1600px; margin: 0 auto; width: 100%; }
+
+        .controls {
+            background: var(--bg-card);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            height: fit-content;
+        }
+
+        .control-group { display: flex; flex-direction: column; gap: 0.3rem; }
+        .control-group label { font-size: 0.8rem; color: var(--text-muted); display: flex; justify-content: space-between; }
+        .control-group span { color: var(--text-main); font-weight: 700; }
+
+        select, button {
+            width: 100%; padding: 0.6rem; border-radius: 0.5rem; border: 1px solid var(--glass-border);
+            background: rgba(255,255,255,0.05); color: white; cursor: pointer; font-size: 0.9rem;
+        }
+        
+        button { background: var(--primary); font-weight: 700; transition: 0.2s; border: none; margin-top: 0.5rem; }
+        button.secondary { background: rgba(255,255,255,0.05); border: 1px solid var(--glass-border); margin-top: 0; }
+        button:hover { opacity: 0.8; transform: translateY(-1px); }
+
+        .sim-container {
+            background: var(--bg-card);
+            border: 1px solid var(--glass-border);
+            border-radius: 1rem;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        #canvas { width: 100%; height: 100%; cursor: crosshair; }
+
+        .watermark {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.4); padding: 8px 15px; border-radius: 8px;
+            border: 1px solid var(--primary); text-align: center; pointer-events: none;
+        }
+
+        input[type="range"] { accent-color: var(--primary); cursor: pointer; }
+        input[type="checkbox"] { accent-color: var(--primary); margin-right: 5px; }
+
+        @media (max-width: 900px) { main { grid-template-columns: 1fr; overflow-y: auto; } .sim-container { height: 500px; } }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>FisicaSim PRO <span style="font-size: 0.7rem; opacity: 0.6;">VERSÃO FINAL</span></h1>
+    </header>
+
+    <main>
+        <section class="controls">
+            <div class="control-group">
+                <label>Pista / Cenário:</label>
+                <select id="scenario">
+                    <option value="free">Queda Livre</option>
+                    <option value="ramp">Rampa Reta</option>
+                    <option value="parabola">Tigela em U (∪)</option>
+                    <option value="loop">Track Ondulado</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>Velocidade: <span id="val-timescale">1.0</span>x</label>
+                <input type="range" id="timescale" min="0.1" max="2.0" step="0.1" value="1.0">
+            </div>
+
+            <hr style="opacity: 0.1;">
+
+            <div class="control-group">
+                <label>Massa: <span id="val-mass">10</span> kg</label>
+                <input type="range" id="mass" min="1" max="100" value="10">
+            </div>
+
+            <div class="control-group">
+                <label>Fricção/Atrito: <span id="val-friction">1.0</span>%</label>
+                <input type="range" id="friction" min="0" max="10" step="0.1" value="1">
+            </div>
+
+            <div style="display: flex; gap: 0.5rem; flex-direction: column;">
+                <button id="btn-pause">Pausar</button>
+                <button id="btn-reset" class="secondary">Resetar Posição</button>
+            </div>
+
+            <div class="control-group" style="padding-top: 0.5rem;">
+                <label style="cursor:pointer;"><input type="checkbox" id="check-bar" checked> Mostrar Gráfico</label>
+                <label style="cursor:pointer;"><input type="checkbox" id="check-slow"> Câmera Lenta</label>
+            </div>
+
+            <div style="margin-top: auto; font-size: 0.7rem; color: var(--text-muted); line-height: 1.4;">
+                • Arraste a bola azul com o mouse.<br>
+                • Solte para iniciar o movimento.
+            </div>
+        </section>
+
+        <section class="sim-container" id="sim-container">
+            <canvas id="canvas"></canvas>
+            
+            <div class="watermark">
+                <span style="font-size: 0.6rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;">Energia Hidromecânica Total</span><br>
+                <span id="val-te" style="color: var(--te-color); font-size: 1.2rem; font-weight: 800;">0.0 J</span>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('sim-container');
+
+        const getElem = id => document.getElementById(id);
+        const massInput = getElem('mass'), frictionInput = getElem('friction');
+        const timescaleInput = getElem('timescale'), scenarioSelect = getElem('scenario');
+        const checkBar = getElem('check-bar'), checkSlow = getElem('check-slow');
+        const valMass = getElem('val-mass'), valFriction = getElem('val-friction'), valTe = getElem('val-te');
+        const btnPause = getElem('btn-pause'), btnReset = getElem('btn-reset');
+
+        const Colors = { ke: '#22c55e', pe: '#3b82f6', te: '#f59e0b', thermal: '#ef4444' };
+
+        let width, height;
+        const pixelsToMeters = 60;
+        let isPaused = false, isDragging = false, timeScale = 1.0, currentScenario = 'free';
+
+        let ball = { x: 0, y: 0, radius: 18, vx: 0, vy: 0, mass: 10, gravity: 9.8, friction: 0.01, thermalEnergy: 0 };
+        let stats = { ke: 0, pe: 0, te: 0, maxTe: 2000 };
+
+        const getSurfaceY = (x) => {
+            if (currentScenario === 'free') return height - 50;
+            const m = 100;
+            if (currentScenario === 'ramp') {
+                if (x < m) return 150;
+                if (x > width - m) return height - 100;
+                return 150 + (x - m) * (height - 250) / (width - 2 * m);
+            }
+            if (currentScenario === 'parabola') {
+                const centerX = width / 2;
+                const bottomY = height - 100, depth = 400, k = depth / Math.pow((width - 150) / 2, 2);
+                return bottomY - Math.max(0, depth - k * Math.pow(x - centerX, 2));
+            }
+            if (currentScenario === 'loop') return height/2 + 100 * Math.sin(x * 0.015) + 120;
+            return height - 50;
+        };
+
+        const getNormal = (x) => {
+            const y1 = getSurfaceY(x - 0.5), y2 = getSurfaceY(x + 0.5);
+            const dx = 1, dy = y2 - y1, len = Math.hypot(dx, dy);
+            return { nx: -dy/len, ny: dx/len, tx: dx/len, ty: dy/len };
+        };
+
+        function reset() {
+            if (currentScenario === 'free') { ball.x = width/2; ball.y = 100; }
+            else { ball.x = 120; ball.y = getSurfaceY(120) - ball.radius - 20; }
+            ball.vx = 0; ball.vy = 0; ball.thermalEnergy = 0;
+        }
+
+        function resize() {
+            width = container.clientWidth; height = container.clientHeight;
+            canvas.width = width; canvas.height = height; reset();
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        massInput.oninput = (e) => { ball.mass = +e.target.value; valMass.innerText = ball.mass; };
+        frictionInput.oninput = (e) => { ball.friction = (+e.target.value / 100) * 1.5; valFriction.innerText = e.target.value; };
+        timescaleInput.oninput = (e) => { timeScale = +e.target.value; getElem('val-timescale').innerText = timeScale.toFixed(1); };
+        scenarioSelect.onchange = (e) => { currentScenario = e.target.value; reset(); };
+        btnPause.onclick = () => { isPaused = !isPaused; btnPause.innerText = isPaused ? 'Retomar' : 'Pausar'; };
+        btnReset.onclick = reset;
+
+        canvas.onmousedown = (e) => {
+            const r = canvas.getBoundingClientRect();
+            if (Math.hypot(e.clientX - r.left - ball.x, e.clientY - r.top - ball.y) < ball.radius * 3) isDragging = true;
+        };
+        window.onmousemove = (e) => {
+            if (!isDragging) return;
+            const r = canvas.getBoundingClientRect();
+            ball.x = e.clientX - r.left; ball.y = e.clientY - r.top;
+            ball.vx = 0; ball.vy = 0; ball.thermalEnergy = 0;
+        };
+        window.onmouseup = () => isDragging = false;
+
+        function update() {
+            if (!isPaused && !isDragging) {
+                const dt = (1/60) * timeScale * (checkSlow.checked ? 0.25 : 1.0);
+                const g = ball.gravity * pixelsToMeters, steps = 15, sdt = dt / steps;
+                for (let i = 0; i < steps; i++) {
+                    ball.vy += g * sdt;
+                    ball.vx *= (1 - ball.friction * sdt); ball.vy *= (1 - ball.friction * sdt);
+                    ball.x += ball.vx * sdt; ball.y += ball.vy * sdt;
+                    if (ball.x < ball.radius) { ball.x = ball.radius; ball.vx = Math.abs(ball.vx)*0.2; }
+                    if (ball.x > width - ball.radius) { ball.x = width - ball.radius; ball.vx = -Math.abs(ball.vx)*0.2; }
+                    const gy = getSurfaceY(ball.x);
+                    if (ball.y + ball.radius > gy) {
+                        const n = getNormal(ball.x); ball.y = gy - ball.radius;
+                        const vdt = (ball.vx * n.tx + ball.vy * n.ty);
+                        const ps = Math.abs(vdt), lr = ball.friction * 4 * sdt;
+                        ball.vx = vdt * n.tx * (1 - lr); ball.vy = vdt * n.ty * (1 - lr);
+                        ball.thermalEnergy += Math.max(0, 0.5 * ball.mass * (Math.pow(ps/60,2) - Math.pow(Math.abs(vdt*(1-lr))/60,2)));
+                    }
+                    if (ball.y > height - ball.radius) { ball.y = height - ball.radius; ball.vy *= -0.2; }
+                }
+            }
+            stats.pe = ball.mass * 9.8 * Math.max(0, (height - 50 - ball.radius - ball.y) / 60);
+            stats.ke = 0.5 * ball.mass * Math.pow(Math.hypot(ball.vx, ball.vy)/60, 2);
+            stats.te = stats.pe + stats.ke + ball.thermalEnergy;
+            if (stats.te > stats.maxTe) stats.maxTe = stats.te;
+            valTe.innerText = stats.te.toFixed(1) + ' J';
+            
+            ctx.clearRect(0, 0, width, height);
+            ctx.beginPath(); ctx.strokeStyle = '#4e54c8'; ctx.lineWidth = 10; ctx.lineCap = 'round';
+            for (let x = 0; x <= width; x += 2) { const y = getSurfaceY(x); x === 0 ? ctx.moveTo(x, y + 4) : ctx.lineTo(x, y + 4); }
+            ctx.stroke();
+            ctx.beginPath(); ctx.strokeStyle = '#8f94fb'; ctx.lineWidth = 4;
+            for (let x = 0; x <= width; x += 2) { const y = getSurfaceY(x); x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); }
+            ctx.stroke();
+            ctx.shadowBlur = 10; ctx.shadowColor = '#6366f1'; ctx.fillStyle = '#6366f1';
+            ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI*2); ctx.fill();
+            ctx.shadowBlur = 0;
+            if (checkBar.checked) {
+                const x = 20, y = 20, w = 150, h = 180;
+                ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.roundRect ? (ctx.beginPath(), ctx.roundRect(x,y,w,h,10), ctx.fill()) : ctx.fillRect(x,y,w,h);
+                const mv = Math.max(stats.maxTe, 100);
+                const db = (v, c, i, l) => {
+                    const bh = (v/mv) * (h-40); ctx.fillStyle = c; ctx.fillRect(x+15+i*32, y+h-25-bh, 20, bh);
+                    ctx.fillStyle = 'white'; ctx.font = '9px Inter'; ctx.fillText(l, x+15+i*32, y+h-10);
+                };
+                db(stats.ke, Colors.ke, 0, 'Cin'); db(stats.pe, Colors.pe, 1, 'Pot'); db(ball.thermalEnergy, Colors.thermal, 2, 'Tér'); db(stats.te, Colors.te, 3, 'Tot');
+            }
+            requestAnimationFrame(update);
+        }
+        update();
+    </script>
+</body>
+</html>
