@@ -1,3 +1,4 @@
+console.log("FisicaSim PRO v2 - Carregada com sucesso");
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 const container = document.getElementById('sim-container');
