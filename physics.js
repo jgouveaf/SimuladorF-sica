@@ -36,20 +36,25 @@ let ball = {
 
 // --- Ramps Definition ---
 const getSurfaceY = (x) => {
+    const margin = 80;
+    const safeWidth = width - margin * 2;
+    
     if (currentScenario === 'free') return height - ball.radius;
     
     if (currentScenario === 'ramp') {
-        const startX = 50, endX = width - 50;
-        const startY = 150, endY = height - 50;
-        if (x < startX) return startY;
-        if (x > endX) return endY;
-        return startY + (x - startX) * (endY - startY) / (endX - startX);
+        const startY = 150, endY = height - 80;
+        if (x < margin) return startY;
+        if (x > width - margin) return endY;
+        return startY + (x - margin) * (endY - startY) / safeWidth;
     }
     
     if (currentScenario === 'parabola') {
+        // Corrected Bowl (∪ shape)
         const centerX = width / 2;
-        const baseY = height - 50;
-        return baseY - 300 + 0.002 * Math.pow(x - centerX, 2);
+        const depth = 350;
+        const k = 0.002;
+        // height - (offset + growth)
+        return (height - 80) - Math.max(0, depth - k * Math.pow(x - centerX, 2));
     }
     
     if (currentScenario === 'loop') {
@@ -71,8 +76,10 @@ function getSurfaceNormal(x) {
 function reset() {
     if (currentScenario === 'free') {
         ball.x = width / 2; ball.y = 100;
+    } else if (currentScenario === 'parabola') {
+        ball.x = 100; ball.y = getSurfaceY(100) - ball.radius - 20;
     } else {
-        ball.x = 80; ball.y = getSurfaceY(80) - ball.radius - 20;
+        ball.x = 100; ball.y = 100;
     }
     ball.vx = 0; ball.vy = 0;
 }
@@ -91,7 +98,7 @@ resize();
 // UI Observers
 massInput.oninput = (e) => { ball.mass = +e.target.value; valMass.innerText = ball.mass; };
 gravityInput.oninput = (e) => { ball.gravity = +e.target.value; valGravity.innerText = ball.gravity; };
-frictionInput.oninput = (e) => { ball.friction = (+e.target.value / 100) * 2; valFriction.innerText = e.target.value; };
+frictionInput.oninput = (e) => { ball.friction = (+e.target.value / 100) * 1.5; valFriction.innerText = e.target.value; };
 timescaleInput.oninput = (e) => { timeScale = +e.target.value; valTimescale.innerText = timeScale.toFixed(1); };
 scenarioSelect.onchange = (e) => { currentScenario = e.target.value; reset(); };
 btnPause.onclick = () => { isPaused = !isPaused; btnPause.innerText = isPaused ? 'Retomar' : 'Pausar'; };
@@ -101,10 +108,7 @@ btnReset.onclick = reset;
 canvas.onmousedown = (e) => {
     const rect = canvas.getBoundingClientRect();
     const mx = e.clientX - rect.left, my = e.clientY - rect.top;
-    if (Math.hypot(mx - ball.x, my - ball.y) < ball.radius * 3) {
-        isDragging = true;
-        isPaused = false; // Resume on drag
-    }
+    if (Math.hypot(mx - ball.x, my - ball.y) < ball.radius * 3) isDragging = true;
 };
 window.onmousemove = (e) => {
     if (!isDragging) return;
@@ -120,50 +124,34 @@ function update() {
     if (!isPaused && !isDragging) {
         const dt = (1/60) * timeScale;
         const g_px = ball.gravity * pixelsToMeters;
-        
-        // Sub-stepping for stability
-        const steps = 8;
+        const steps = 10;
         const sdt = dt / steps;
 
         for (let i = 0; i < steps; i++) {
-            // Apply Gravity
             ball.vy += g_px * sdt;
-            
-            // Apply Friction (Air)
             ball.vx *= (1 - ball.friction * sdt);
             ball.vy *= (1 - ball.friction * sdt);
 
-            // Move
             ball.x += ball.vx * sdt;
             ball.y += ball.vy * sdt;
 
-            // Collision Resolution
+            // Constrain X to prevent hitting walls in scenarios
+            const margin = ball.radius + 10;
+            if (ball.x < margin) { ball.x = margin; ball.vx = Math.abs(ball.vx) * 0.4; }
+            if (ball.x > width - margin) { ball.x = width - margin; ball.vx = -Math.abs(ball.vx) * 0.4; }
+
             const groundY = getSurfaceY(ball.x);
             if (ball.y + ball.radius > groundY) {
-                // Ball is penetrating ground
                 const norm = getSurfaceNormal(ball.x);
-                
-                // 1. Position correction
                 ball.y = groundY - ball.radius;
-
-                // 2. Velocity resolution (Slide along tangent)
-                // Project velocity onto tangent: V_new = (V dot T) * T
                 const v_dot_t = (ball.vx * norm.tx + ball.vy * norm.ty);
-                
-                // Surface Friction
-                const surfaceFriction = 1 - (ball.friction * 5 * sdt); 
-                
+                const surfaceFriction = 1 - (ball.friction * 4 * sdt); 
                 ball.vx = v_dot_t * norm.tx * surfaceFriction;
                 ball.vy = v_dot_t * norm.ty * surfaceFriction;
-                
-                // Add tiny jump prevention
                 if (Math.abs(ball.vy) < 1) ball.vy = 0;
             }
 
-            // Wall Bounce
-            if (ball.x < ball.radius) { ball.x = ball.radius; ball.vx = Math.abs(ball.vx) * 0.5; }
-            if (ball.x > width - ball.radius) { ball.x = width - ball.radius; ball.vx = -Math.abs(ball.vx) * 0.5; }
-            if (ball.y > height - ball.radius) { ball.y = height - ball.radius; ball.vy = -Math.abs(ball.vy) * 0.5; }
+            if (ball.y > height - ball.radius) { ball.y = height - ball.radius; ball.vy = -Math.abs(ball.vy) * 0.4; }
         }
     }
 
@@ -178,7 +166,6 @@ function update() {
     peLabel.innerText = PE.toFixed(1) + ' J';
     teLabel.innerText = TE.toFixed(1) + ' J';
     
-    // Progress bars (relative to total energy at start usually, but let's use 5000 as base)
     const baseScale = Math.max(TE, 2000);
     keBar.style.width = Math.min(100, (KE / baseScale) * 100) + '%';
     peBar.style.width = Math.min(100, (PE / baseScale) * 100) + '%';
@@ -202,7 +189,6 @@ function render() {
     }
     ctx.stroke();
 
-    // Fill area below surface
     ctx.lineTo(width, height);
     ctx.lineTo(0, height);
     ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
