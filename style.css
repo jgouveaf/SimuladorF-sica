@@ -103,6 +103,42 @@ main {
     font-weight: 600;
 }
 
+input[type="checkbox"] {
+    appearance: none;
+    background-color: rgba(255, 255, 255, 0.05);
+    margin-right: 0.5rem;
+    font: inherit;
+    color: var(--primary);
+    width: 1.15em;
+    height: 1.15em;
+    border: 0.15em solid var(--glass-border);
+    border-radius: 0.15em;
+    transform: translateY(-0.075em);
+    display: inline-grid;
+    place-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+input[type="checkbox"]::before {
+    content: "";
+    width: 0.65em;
+    height: 0.65em;
+    transform: scale(0);
+    transition: 120ms transform ease-in-out;
+    box-shadow: inset 1em 1em var(--primary);
+    background-color: CanvasText;
+}
+
+input[type="checkbox"]:checked::before {
+    transform: scale(1);
+}
+
+input[type="checkbox"]:checked {
+    border-color: var(--primary);
+    background-color: rgba(99, 102, 241, 0.1);
+}
+
 input[type="range"] {
     appearance: none;
     width: 100%;
