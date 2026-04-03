@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Simule energia cinética e potencial com nosso simulador de física interativo. Veja a física em ação em tempo real.">
+    <title>FísicaSim - Simulador de Energia | Cinética e Potencial</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <header>
+        <h1>FísicaSim</h1>
+        <p class="subtitle">Simulador de Energia Mecânica Interativo</p>
+    </header>
+
+    <main>
+        <section class="controls">
+            <div class="control-group">
+                <label for="mass">Massa (kg): <span id="val-mass">10</span></label>
+                <input type="range" id="mass" min="1" max="100" value="10">
+            </div>
+
+            <div class="control-group">
+                <label for="gravity">Gravidade (m/s²): <span id="val-gravity">9.8</span></label>
+                <input type="range" id="gravity" min="1" max="30" step="0.1" value="9.8">
+            </div>
+
+            <div class="control-group">
+                <label for="friction">Atrito do Ar (%): <span id="val-friction">0</span></label>
+                <input type="range" id="friction" min="0" max="10" step="0.1" value="0">
+            </div>
+
+            <div class="button-group">
+                <button id="btn-reset" class="secondary">Resetar</button>
+                <button id="btn-pause">Pausar</button>
+            </div>
+
+            <div class="instructions">
+                <strong>Como usar:</strong><br>
+                1. Arraste a esfera para qualquer lugar.<br>
+                2. Solte para iniciar a queda.<br>
+                3. Ajuste os parâmetros no painel lateral.<br>
+                4. Observe a conversão de energia.
+            </div>
+        </section>
+
+        <section class="sim-container" id="sim-container">
+            <canvas id="canvas"></canvas>
+            
+            <div class="stats-overlay">
+                <div class="energy-bar-wrap">
+                    <div class="energy-label">
+                        Energia Cinética <span id="val-ke">0.0 J</span>
+                    </div>
+                    <div class="bar-bg">
+                        <div class="bar-fill ke-bar" id="bar-ke"></div>
+                    </div>
+                </div>
+
+                <div class="energy-bar-wrap">
+                    <div class="energy-label">
+                        Energia Potencial <span id="val-pe">0.0 J</span>
+                    </div>
+                    <div class="bar-bg">
+                        <div class="bar-fill pe-bar" id="bar-pe"></div>
+                    </div>
+                </div>
+
+                <div class="energy-bar-wrap">
+                    <div class="energy-label">
+                        Energia Total <span id="val-te">0.0 J</span>
+                    </div>
+                    <div class="bar-bg">
+                        <div class="bar-fill te-bar" id="bar-te"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        &copy; 2026 FísicaSim - Criado por Antigravity
+    </footer>
+
+    <!-- Scripts -->
+    <script src="physics.js"></script>
+</body>
+</html>
