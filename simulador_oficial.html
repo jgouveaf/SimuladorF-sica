@@ -3,45 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FísicaSim PRO - Versão Super-Quique</title>
+    <title>FísicaSim PRO - Versão Final Com Quique</title>
     <style>
         :root { --p: #6366f1; --bg: #020617; --card: rgba(30, 41, 59, 0.8); }
         * { box-sizing: border-box; }
-        body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; display: flex; flex-direction: column; height: 100vh; margin: 0; overflow: hidden; }
-        header { padding: 10px; text-align: center; background: rgba(0,0,0,0.5); border-bottom: 2px solid var(--p); }
+        body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; height: 100vh; margin: 0; overflow: hidden; }
+        header { padding: 10px; text-align: center; border-bottom: 2px solid var(--p); background: #000; }
         main { display: grid; grid-template-columns: 280px 1fr; flex: 1; padding: 15px; gap: 15px; }
         .side { background: var(--card); padding: 20px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); display: flex; flex-direction: column; gap: 15px; }
-        .sim { background: #000; border-radius: 15px; position: relative; overflow: hidden; border: 2px solid var(--p); box-shadow: 0 0 20px rgba(99, 102, 241, 0.2); }
-        canvas { width: 100%; height: 100%; border-radius: 15px; }
+        .sim { background: #000; border-radius: 15px; position: relative; overflow: hidden; border: 2px solid var(--p); }
+        canvas { width: 100%; height: 100%; }
         select, input, button { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: #1e293b; color: white; font-size: 14px; }
-        button { background: var(--p); border: none; font-weight: bold; cursor: pointer; margin-top: 5px; text-transform: uppercase; }
-        button:hover { filter: brightness(1.2); }
-        .label { font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; display: flex; justify-content: space-between; margin-bottom: 4px; }
-        .stats-box { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.7); padding: 10px 20px; border-radius: 12px; border: 1px solid var(--p); backdrop-filter: blur(5px); }
+        button { background: var(--p); border: none; font-weight: bold; cursor: pointer; text-transform: uppercase; }
+        .label { font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; display: flex; justify-content: space-between; margin-bottom: 2px; }
+        .stats-box { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); padding: 12px 25px; border-radius: 12px; border: 2px solid var(--p); text-align: center; width: 220px; }
+        #val-speed { font-size: 1.2rem; color: #22c55e; font-weight: 800; }
+        #val-te { font-size: 1.4rem; color: #fbbf24; font-weight: 800; }
     </style>
 </head>
 <body>
-    <header><h1>FísicaSim PRO <span style="font-size: 12px; background: #22c55e; color: black; padding: 2px 8px; border-radius: 4px; vertical-align: middle;">VERSÃO COM QUIQUE</span></h1></header>
+    <header><h1>FísicaSim OFICIAL <span style="font-size: 12px; background: #22c55e; color: black; padding: 2px 8px; border-radius: 4px; vertical-align: middle;">V3.5</span></h1></header>
     <main>
         <div class="side">
-            <div><label class="label">Cenários de Pista:</label>
+            <div><label class="label">Pista:</label>
             <select id="scen">
-                <option value="loop">Pista Ondulada (Ir e Voltar)</option>
+                <option value="loop">Pista Ondulada (Infinito)</option>
                 <option value="free">Queda Livre (Quique!)</option>
-                <option value="u">Tigela em Formato de U</option>
-                <option value="ramp">Rampa Inclinada</option>
+                <option value="u">Tigela em U (∪)</option>
+                <option value="ramp">Rampa Reta</option>
             </select></div>
-            <div><label class="label">Atrito / Fricção (%): <span id="v-f">1.0</span></label><input type="range" id="f" min="0" max="10" step="0.1" value="1"></div>
-            <div><label class="label">Elasticidade (Quique): <span id="v-e">70</span>%</label><input type="range" id="bounce" min="0" max="100" value="70"></div>
+            <div><label class="label">Elasticidade (Pulo): <span id="v-e">80</span>%</label><input type="range" id="bounce" min="0" max="100" value="80"></div>
+            <div><label class="label">Atrito: <span id="v-f">1.0</span>%</label><input type="range" id="f" min="0" max="10" step="0.1" value="1"></div>
             <button id="reset">Resetar Bola</button>
-            <button id="pause" style="background:#64748b;">Pausar</button>
-            <div style="margin-top: auto; font-size: 10px; opacity: 0.5; text-align: center;">Clique e Arraste a bola para soltá-la de qualquer lugar!</div>
+            <button id="pause" style="background:#475569;">Pausar</button>
+            <div style="font-size: 10px; opacity: 0.5; margin-top: auto;">Pegue e solte a bola com o mouse.</div>
         </div>
         <div class="sim" id="cont">
             <canvas id="cv"></canvas>
             <div class="stats-box">
-                <div style="font-size: 10px; opacity: 0.6; text-align: center;">ENERGIA TOTAL:</div>
-                <div id="te-val" style="font-size: 24px; font-weight: 900; color: #fbbf24; text-align: center;">0.0 J</div>
+                <div class="label" style="justify-content: center;">Velocidade Atual</div>
+                <div id="val-speed">0.0 m/s</div>
+                <div class="label" style="justify-content: center; margin-top: 8px;">Energia Total</div>
+                <div id="val-te">0.0 J</div>
             </div>
         </div>
     </main>
@@ -50,16 +53,15 @@
         const fIn = document.getElementById('f'), eIn = document.getElementById('bounce'), scSe = document.getElementById('scen'), bRe = document.getElementById('reset'), bPa = document.getElementById('pause');
 
         let w, h, paused = false, drag = false;
-        let b = { x:0, y:0, r:18, vx:0, vy:0, m:10, f:0.01, th:0, elast: 0.7 };
+        let b = { x:0, y:0, r:18, vx:0, vy:0, m:10, f:0.01, th:0, elast: 0.8 };
         let scenario = 'loop', maxE = 100;
 
         const getY = (x) => {
             if (scenario === 'free') return h - 60;
             const mid = w/2, sw = (w-200)/2;
             if (scenario === 'u') {
-                const bot = h-80, top = 180, d = bot-top;
-                const dist = Math.max(-sw, Math.min(sw, x-mid));
-                return top + d * (1 - Math.pow(dist/sw, 2));
+                const bot = h-80, d = bot-180, dist = Math.max(-sw, Math.min(sw, x-mid));
+                return 180 + d * (1 - Math.pow(dist/sw, 2));
             }
             if (scenario === 'ramp') {
                 if (x < 100) return 150 - (100-x)*2;
@@ -68,7 +70,6 @@
             }
             if (scenario === 'loop') {
                 const base = h/2 + 80*Math.sin(x*0.018) + 120;
-                // CURVA DE RETORNO NAS BORDAS:
                 if (x < 150) return base - Math.pow(150-x, 2)*0.08;
                 if (x > w-150) return base - Math.pow(x-(w-150), 2)*0.08;
                 return base;
@@ -77,8 +78,8 @@
         };
 
         function reset() {
-            if (scenario === 'loop') { b.x = 200; b.y = getY(200)-50; }
-            else if (scenario === 'u') { b.x = 150; b.y = getY(150)-50; }
+            if (scenario === 'loop') { b.x = 200; b.y = getY(200)-80; }
+            else if (scenario === 'u') { b.x = 150; b.y = getY(150)-80; }
             else { b.x = w/2; b.y = 100; }
             b.vx = 0; b.vy = 0; b.th = 0;
         }
@@ -93,7 +94,7 @@
         bPa.onclick = () => { paused = !paused; bPa.innerText = paused ? 'Retomar' : 'Pausar'; };
 
         cv.onmousedown = (e) => { const r = cv.getBoundingClientRect(); if (Math.hypot(e.clientX-r.left-b.x, e.clientY-r.top-b.y) < 50) drag = true; };
-        window.onmousemove = (e) => { if (!drag) return; const r = cv.getBoundingClientRect(); b.x = e.clientX-r.left; b.y = e.clientY-r.top; b.vx = 0; b.vy = 0; b.th = 0; };
+        window.onmousemove = (e) => { if (!drag) return; const r = cv.getBoundingClientRect(); b.x = e.clientX-r.left; b.y = e.clientY-r.top; b.vx = (e.movementX*30); b.vy = (e.movementY*30); b.th = 0; };
         window.onmouseup = () => drag = false;
 
         function update() {
@@ -101,43 +102,44 @@
                 const n = 15, dt = (1/60)/n, g = 9.8 * 60;
                 for (let i=0; i<n; i++) {
                     b.vy += g * dt; b.x += b.vx * dt; b.y += b.vy * dt;
-                    if (b.x < b.r) { b.x = b.r; b.vx = Math.abs(b.vx)*0.4; }
-                    if (b.x > w-b.r) { b.x = w-b.r; b.vx = -Math.abs(b.vx)*0.4; }
+                    if (b.x < b.r) { b.x = b.r; b.vx = Math.abs(b.vx)*0.5; }
+                    if (b.x > w-b.r) { b.x = w-b.r; b.vx = -Math.abs(b.vx)*0.5; }
                     
                     const gy = getY(b.x);
                     if (b.y + b.r > gy) {
-                        const y1 = getY(b.x-0.5), y2 = getY(b.x+0.5), tx = 1, ty = y2-y1, l = Math.hypot(tx,ty), ntx = tx/l, nty = ty/l;
-                        const nx = -nty, ny = ntx; // Vetor Normal
+                        const y1 = getY(b.x-0.5), y2 = getY(b.x+0.5), tx = 1, ty = y2-y1, l = Math.hypot(tx,ty);
+                        const ntx = tx/l, nty = ty/l, nx = nty, ny = -ntx; // NORMAL APONTANDO PARA CIMA (UP)
                         
                         b.y = gy - b.r;
                         const vdt = b.vx*ntx + b.vy*nty, vdn = b.vx*nx + b.vy*ny;
                         
-                        if (vdn > 0) { // Indo para dentro da pista
-                            b.vx = vdt*ntx - vdn*nx*b.elast; b.vy = vdt*nty - vdn*ny*b.elast; // O QUIQUE!
+                        if (vdn > 0) { // Indo PARA DENTRO da pista
+                            b.vx = vdt*ntx - vdn*nx*b.elast; b.vy = vdt*nty - vdn*ny*b.elast; // REFLEXÃO (O QUIQUE)
                         } else {
                             b.vx = vdt*ntx; b.vy = vdt*nty;
                         }
-                        
                         const loss = b.f*4*dt; b.vx *= (1-loss); b.vy *= (1-loss);
-                        b.th += Math.max(0, 0.5*b.m*(Math.pow(Math.hypot(b.vx/60, b.vy/60),2)*loss));
+                        b.th += Math.max(0, 0.5*b.m*(Math.pow(Math.hypot(b.vx/60, b.vy/60),2)*loss)*10);
                     }
                     if (b.y > h-b.r) { b.y = h-b.r; if (Math.abs(b.vy) > 20) b.vy *= -b.elast; else b.vy = 0; }
                 }
             }
+            const speed = Math.hypot(b.vx, b.vy)/60;
             const pe = b.m * 9.8 * Math.max(0, (h-60-b.r-b.y)/60);
-            const ke = 0.5 * b.m * Math.pow(Math.hypot(b.vx, b.vy)/60, 2);
+            const ke = 0.5 * b.m * speed * speed;
             const te = pe + ke + b.th; if (te > maxE) maxE = te;
+            document.getElementById('val-speed').innerText = speed.toFixed(1) + ' m/s';
             document.getElementById('te-val').innerText = te.toFixed(1) + ' J';
 
             ctx.clearRect(0,0,w,h);
-            ctx.beginPath(); ctx.strokeStyle = '#1e1b4b'; ctx.lineWidth = 14; ctx.lineCap='round';
+            ctx.beginPath(); ctx.strokeStyle = '#1e1b4b'; ctx.lineWidth = 14; 
             for (let x=0; x<=w; x+=3) { const y = getY(x); x===0?ctx.moveTo(x,y+6):ctx.lineTo(x,y+6); }
             ctx.stroke();
             ctx.beginPath(); ctx.strokeStyle = '#4f46e5'; ctx.lineWidth = 5;
             for (let x=0; x<=w; x+=3) { const y = getY(x); x===0?ctx.moveTo(x,y):ctx.lineTo(x,y); }
             ctx.stroke();
-            ctx.shadowBlur = 10; ctx.shadowColor = '#6366f1'; ctx.fillStyle = '#6366f1';
-            ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
+            ctx.beginPath(); ctx.fillStyle = '#6366f1'; ctx.shadowBlur = 10; ctx.shadowColor = '#6366f1';
+            ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur = 0;
 
             const bx=20, by=20, bw=140, bh=170;
             ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.beginPath(); ctx.roundRect(bx,by,bw,bh,10); ctx.fill();
