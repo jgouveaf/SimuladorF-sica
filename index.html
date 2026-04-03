@@ -3,135 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Simulador de física interativo para energia cinética e potencial.">
-    <title>FísicaSim PRO - Simulador de Energia</title>
-    
-    <!-- Google Fonts -->
+    <title>FísicaSim PRO V3</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- CSS -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
     <header>
-        <h1>FísicaSim PRO</h1>
-        <p class="subtitle">Simulador de Energia Mecânica e Rampas</p>
+        <h1>FísicaSim PRO <span style="font-size: 0.8rem; background: var(--primary); padding: 2px 6px; border-radius: 4px; vertical-align: middle;">V3</span></h1>
+        <p class="subtitle">Simulador de Energia Mecânica (Versão Simplificada)</p>
     </header>
 
     <main>
-        <!-- PAINEL DE CONTROLE (O MENU) -->
-        <section class="controls" id="menu-controles">
-            <h2 style="font-size: 1.25rem; margin-bottom: 1rem; color: var(--primary);">Menu de Configuração</h2>
-
+        <section class="controls">
+            <h2 style="color: var(--primary); margin-bottom: 1rem;">Configurações</h2>
+            
             <div class="control-group">
-                <label for="scenario"><strong>Escolher Cenário/Rampa:</strong></label>
+                <label><strong>Cenário:</strong></label>
                 <select id="scenario">
-                    <option value="free">Queda Livre (Padrão)</option>
-                    <option value="ramp">Rampa Simples (Inclinada)</option>
-                    <option value="parabola">Parábola (Curva em U)</option>
-                    <option value="loop">Looping Ondulado</option>
+                    <option value="free">Queda Livre</option>
+                    <option value="ramp">Rampa</option>
+                    <option value="parabola">Parábola (U)</option>
+                    <option value="loop">Looping</option>
                 </select>
             </div>
 
             <div class="control-group">
-                <label for="timescale">Velocidade da Simulação: <span id="val-timescale">1.0</span>x</label>
+                <label>Tempo: <span id="val-timescale">1.0</span>x</label>
                 <input type="range" id="timescale" min="0.1" max="2.0" step="0.1" value="1.0">
             </div>
 
-            <hr style="border: 0; border-top: 1px solid var(--glass-border); margin: 0.5rem 0;">
+            <hr style="border:0; border-top:1px solid rgba(255,255,255,0.1); margin:1rem 0;">
 
             <div class="control-group">
-                <label for="mass">Massa do Objeto (kg): <span id="val-mass">10</span></label>
+                <label>Massa: <span id="val-mass">10</span>kg</label>
                 <input type="range" id="mass" min="1" max="100" value="10">
             </div>
 
             <div class="control-group">
-                <label for="gravity">Gravidade (m/s²): <span id="val-gravity">9.8</span></label>
-                <input type="range" id="gravity" min="1" max="30" step="0.1" value="9.8">
-            </div>
-
-            <div class="control-group">
-                <label for="friction">Atrito da Superfície (%): <span id="val-friction">1</span></label>
+                <label>Atrito: <span id="val-friction">1</span>%</label>
                 <input type="range" id="friction" min="0" max="10" step="0.1" value="1">
             </div>
 
             <div class="button-group">
-                <button id="btn-reset" class="secondary">Resetar Posição</button>
-                <button id="btn-pause">Pausar/Retomar</button>
+                <button id="btn-reset" class="secondary">Resetar</button>
+                <button id="btn-pause">Pausar</button>
             </div>
 
-            <hr style="border: 0; border-top: 1px solid var(--glass-border); margin: 0.5rem 0;">
-
-            <div class="control-group">
-                <label><strong>Visualização:</strong></label>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem;">
-                    <label style="font-size: 0.75rem; color: var(--text-muted); cursor: pointer;">
-                        <input type="checkbox" id="check-grid" checked> Grade
-                    </label>
-                    <label style="font-size: 0.75rem; color: var(--text-muted); cursor: pointer;">
-                        <input type="checkbox" id="check-pie" checked> Gráfico Pizza
-                    </label>
-                    <label style="font-size: 0.75rem; color: var(--text-muted); cursor: pointer;">
-                        <input type="checkbox" id="check-bar" checked> Gráfico Barras
-                    </label>
-                    <label style="font-size: 0.75rem; color: var(--text-muted); cursor: pointer;">
-                        <input type="checkbox" id="check-slow"> Câmera Lenta
-                    </label>
-                </div>
-            </div>
-
-            <div class="instructions">
-                <strong>Instruções:</strong><br>
-                - Selecione um cenário no menu acima.<br>
-                - Arraste a esfera azul com o mouse.<br>
-                - Solte para iniciar o movimento.<br>
-                - Observe os gráficos de energia (KE/PE).
+            <div class="control-group" style="margin-top: 1rem;">
+                <label style="cursor:pointer;"><input type="checkbox" id="check-bar" checked> Mostrar Gráfico</label>
+                <label style="cursor:pointer;"><input type="checkbox" id="check-slow"> Câmera Lenta</label>
             </div>
         </section>
 
-        <!-- ÁREA DA SIMULAÇÃO -->
         <section class="sim-container" id="sim-container">
             <canvas id="canvas"></canvas>
-            
-            <div class="stats-overlay">
-                <div class="energy-bar-wrap">
-                    <div class="energy-label">
-                        E. Cinética <span id="val-ke">0.0 J</span>
-                    </div>
-                    <div class="bar-bg">
-                        <div class="bar-fill ke-bar" id="bar-ke"></div>
-                    </div>
-                </div>
-
-                <div class="energy-bar-wrap">
-                    <div class="energy-label">
-                        E. Potencial <span id="val-pe">0.0 J</span>
-                    </div>
-                    <div class="bar-bg">
-                        <div class="bar-fill pe-bar" id="bar-pe"></div>
-                    </div>
-                </div>
-
-                <div class="energy-bar-wrap">
-                    <div class="energy-label">
-                        Total (Mecânica) <span id="val-te">0.0 J</span>
-                    </div>
-                    <div class="bar-bg">
-                        <div class="bar-fill te-bar" id="bar-te"></div>
-                    </div>
+            <div style="position: absolute; bottom: 20px; width: 100%; text-align: center; pointer-events: none;">
+                <div style="background: rgba(0,0,0,0.5); display: inline-block; padding: 10px 20px; border-radius: 10px; border: 1px solid var(--primary);">
+                    <span style="color: var(--text-muted); font-size: 0.8rem;">ENERGIA TOTAL:</span><br>
+                    <span id="val-te" style="color: var(--te-color); font-size: 1.5rem; font-weight: 800;">0.0 J</span>
                 </div>
             </div>
         </section>
     </main>
 
-    <footer>
-        &copy; 2026 FísicaSim PRO - Simulador de Energia Interativo
+    <footer style="margin-top: 2rem; opacity: 0.5;">
+        FísicaSim PRO v3.0 - Última Atualização: Hoje
     </footer>
 
-    <!-- Scripts -->
-    <script src="physics.js?v=2"></script>
+    <script src="physics.js?v=3"></script>
 </body>
 </html>
